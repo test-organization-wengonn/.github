@@ -2,6 +2,6 @@
     "name": "Octo Organization Workflow",
     "description": "Octo Organization CI starter workflow.",
     "categories": [
-        dependency-management
+        continuous-integration
     ]
 }
