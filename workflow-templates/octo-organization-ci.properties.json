@@ -1,7 +1,4 @@
 {
     "name": "Octo Organization Workflow",
-    "description": "Octo Organization CI starter workflow.",
-    "categories": [
-        continuous-integration
-    ]
+    "description": "Octo Organization CI starter workflow."
 }
