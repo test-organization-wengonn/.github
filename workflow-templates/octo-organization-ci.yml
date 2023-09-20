@@ -1,17 +1,73 @@
-name: Octo Organization CI
-
-on:
-  push:
-    branches: [ $default-branch ]
+name: GitHub Action To Create Clickup Card for Depandabot PR's
+run-name: GitHub Action To Create Clickup Card for Depandabot PR's 🚀
+on: 
   pull_request:
+    types: opened
     branches: [ $default-branch ]
-
+    
 jobs:
-  build:
+  Get-Github-Actions-User:
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }} # This step only runs when PR has dependabot/ HEAD
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v3
+      - name: Depandabot - Clickup Integration 
+        run: echo "🎉 The job was triggered by a ${{ github.actor }}." 
 
-      - name: Run a one-line script
-        run: echo Hello from Octo Organization
+      - name: Fetch Dependabot metadata
+        id: dependabot-metadata
+        uses: dependabot/fetch-metadata@v1
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Set Vars
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
+        id: vars
+        run: |
+          echo "------Setting Variables---------"
+
+          gh api "${{ github.event.pull_request.url }}" > pull_request.json
+          
+          pull_request_link=$(cat pull_request.json | jq -r .html_url)
+          echo "PR Link - $pull_request_link"
+          vuln_package=${{ steps.dependabot-metadata.outputs.dependency-names }}
+          echo "Vuln Package - $vuln_package"
+
+          # Call to get alerts
+          gh api "https://api.github.com/repos/${{ github.repository }}/dependabot/alerts" > dependabot_alerts.json
+
+          cat dependabot_alerts.json | jq -r --arg vuln_package "$vuln_package" '.[] | select(.dependency.package.name==$vuln_package)' > vuln_package.json
+          cat vuln_package.json
+          
+          cve_id=$(cat vuln_package.json | jq -r '.security_advisory.cve_id' | sed 'H;1h;$!d;x;y/\n/,/')
+          summary=$(cat vuln_package.json | jq -r '.security_advisory.summary' | head -n 1)
+          severity=$(cat vuln_package.json | jq -r '.security_advisory.severity' | head -n 1)
+          range=$(cat vuln_package.json | jq -r '.security_advisory.vulnerabilities[].vulnerable_version_range' | head -n 1)
+          fixed_version=$(cat vuln_package.json | jq -r '.security_advisory.vulnerabilities[].first_patched_version.identifier' | head -n 1)
+          dependabot_link=$(cat vuln_package.json | jq -r '.html_url' | head -n 1)
+          
+          echo "cve_id=$cve_id" >> "$GITHUB_OUTPUT"
+          echo "summary=$summary" >> "$GITHUB_OUTPUT"
+          echo "severity=$severity" >> "$GITHUB_OUTPUT"
+          echo "range=$range" >> "$GITHUB_OUTPUT"
+          echo "fixed_version=$fixed_version" >> "$GITHUB_OUTPUT"
+          echo "dependabot_link=$dependabot_link" >> "$GITHUB_OUTPUT"
+          echo "pull_request_link=$pull_request_link" >> "$GITHUB_OUTPUT"
+
+          echo "---------Variables Set----------"
+                
+      - name: Test custom action - clickup integration - ${{ github.actor }}
+        id: clickup-task-creation
+        uses: ritik-deriv/clickup-action@v1.9.15
+        with:
+          clickup_api_token: "${{ secrets.CLICKUP_API_TOKEN }}"
+          pull_request_title: "[${{ github.repository }}] - ${{ github.event.pull_request.title }}"
+          cve_id: "${{ steps.vars.outputs.cve_id }}"
+          summary: "${{ steps.vars.outputs.summary }}"
+          severity: "${{ steps.vars.outputs.severity }}"
+          range: "${{ steps.vars.outputs.range }}"
+          fixed_version: "${{ steps.vars.outputs.fixed_version }}"
+          dependabot_link: "${{ steps.vars.outputs.dependabot_link }}"
+          pull_request_link: "${{ steps.vars.outputs.pull_request_link }}"
+          dependency_type: "${{ steps.dependabot-metadata.outputs.dependency-type }}"
+          vulnerable_package: "${{ steps.dependabot-metadata.outputs.dependency-names }}"
