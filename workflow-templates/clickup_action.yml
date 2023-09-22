@@ -6,7 +6,7 @@ on:
     branches: [ $default-branch ]
     
 jobs:
-  Get-Github-Actions-User:
+  Create-Clickup-Card:
     if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }} # This step only runs when PR has dependabot/ HEAD
     runs-on: ubuntu-latest
     steps:
@@ -22,7 +22,7 @@ jobs:
                 
       - name: Test custom action - clickup integration - ${{ github.actor }}
         id: clickup-task-creation
-        uses: ritik-deriv/clickup-action@v1.9.27
+        uses: ritik-deriv/clickup-action@v1.9.28
         with:
           clickup_api_token: "${{ secrets.CLICKUP_API_TOKEN }}"
           github_token: "${{ secrets.PAT }}"
