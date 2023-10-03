@@ -22,7 +22,7 @@ jobs:
                 
       - name: Test custom action - clickup integration - ${{ github.actor }}
         id: clickup-task-creation
-        uses: ritik-deriv/clickup-action@v1.9.28
+        uses: ritik-deriv/clickup-action@v1.9.29
         with:
           clickup_api_token: "${{ secrets.CLICKUP_API_TOKEN }}"
           github_token: "${{ secrets.PAT }}"
