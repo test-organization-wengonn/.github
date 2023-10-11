@@ -3,13 +3,17 @@ run-name: GitHub Action To Create Clickup Card for Depandabot PR's 🚀
 on: 
   pull_request:
     types: opened
-    branches: [ $default-branch ]
+    branches: [ $default-branch ] # This will become main/master on runtime
     
 jobs:
-  Create-Clickup-Card:
-    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }} # This step only runs when PR has dependabot/ HEAD
+  Get-Github-Actions-User:
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }} # This step only runs when Dependabot has created the PR.
     runs-on: ubuntu-latest
-    steps:
+    
+    permissions:
+      pull-requests: read
+      
+    steps:  
       - name: Depandabot - Clickup Integration 
         run: echo "🎉 The job was triggered by a ${{ github.actor }}." 
 
@@ -17,15 +21,14 @@ jobs:
         id: dependabot-metadata
         uses: dependabot/fetch-metadata@v1
         with:
-          github-token: "${{ secrets.PAT }}"
-
-                
-      - name: Test custom action - clickup integration - ${{ github.actor }}
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+        
+      - name: Create Clickup Task
         id: clickup-task-creation
-        uses: security-binary/clickup-action@v1.9.29
+        uses: security-binary/clickup-action@v1.9.33 # Use the desired tag version here, ideally latest
         with:
           clickup_api_token: "${{ secrets.CLICKUP_API_TOKEN }}"
-          github_token: "${{ secrets.PAT }}"
+          github_token: "${{ secrets.FINE_GRAINED_PAT }}"
           pull_request_title: "[${{ github.repository }}] - ${{ github.event.pull_request.title }}"
           vulnerable_version: "${{ steps.dependabot-metadata.outputs.previous-version }}"
           fixed_version: "${{ steps.dependabot-metadata.outputs.new-version }}"
@@ -33,3 +36,5 @@ jobs:
           vulnerable_package: "${{ steps.dependabot-metadata.outputs.dependency-names }}"
           pull_request_number: "${{ github.event.number }}"
           github_repository: "${{ github.repository }}"
+          slack_webhook: "${{ secrets.SLACK_WEBHOOK }}" # Webhook of channel to send notification on failed runs
+          workflow_run_id: "${{ github.run_id }}"
